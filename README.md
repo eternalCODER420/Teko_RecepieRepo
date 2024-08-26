@@ -49,3 +49,5 @@ You should see the logging printed in the first terminal:
 ```
 
 Downloded sql stuff from : https://www.sqlite.org/download.html
+
+test
