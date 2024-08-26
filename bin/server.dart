@@ -4,6 +4,21 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_router/shelf_router.dart';
 
+import 'dart:ffi';
+
+
+DynamicLibrary _openOnLinux() {
+  final scriptDir = File(Platform.script.toFilePath()).parent;
+  final libraryNextToScript = File('${scriptDir.path}/sqlite3.so');
+  return DynamicLibrary.open(libraryNextToScript.path);
+}
+
+DynamicLibrary _openOnWindows() {
+  final scriptDir = File(Platform.script.toFilePath()).parent;
+  final libraryNextToScript = File('${scriptDir.path}/sqlite3.dll');
+  return DynamicLibrary.open(libraryNextToScript.path);
+}
+
 // Configure routes.
 final _router = Router()
   ..get('/', _rootHandler)

@@ -10,6 +10,7 @@ dependencies:
   args: ^2.4.0
   shelf: ^1.4.2
   shelf_router: ^1.1.4
+  sqlite3: ^2.4.6
 
 dev_dependencies:
   http: ^1.1.0
