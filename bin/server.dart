@@ -25,9 +25,10 @@ final _router = Router()
   ..get('/', _rootHandler)
   ..get('/echo/<message>', _echoHandler)
   ..get('/receipt', _getReceiptsHandler)
-  ..get('/receipt/set/<name>/<components>', _setReceiptHandler)
-  ..get('/receipt/get/<id>', _getReceiptHandler)
-  ..get('/receipt/del/<id>', _deleteReceiptHandler);
+  // ..get('/receipt/set/<name>/<components>', _setReceiptHandler)
+  ..post('/receipt', _setReceiptHandler)  // Changed to POST
+  ..get('/receipt/<id>', _getReceiptHandler)
+  ..delete('/receipt/<id>', _deleteReceiptHandler);
 
 Response _rootHandler(Request req) {
   return Response.ok('Hello, World!\n');
@@ -38,12 +39,18 @@ Response _echoHandler(Request request) {
   return Response.ok('$message\n');
 }
 
-Response _setReceiptHandler(Request request) {
-  final name = request.params['name'];
-  final components = request.params['components'];
+Future<Response> _setReceiptHandler(Request request) async {
+  // Parse the JSON body of the request
+  // async because it can take a while to read from network, depending on how large body is
+  final payload = await request.readAsString();
+  final jsonData = jsonDecode(payload);
 
-  if (name == null || components == null) {
-    return Response.badRequest(body: 'Missing recipe name or components.\n');
+  //? -> allow null (dont cause exception), but process and respond to it below
+  final String? name = jsonData['name'];
+  final List<dynamic>? components = jsonData['components'];
+
+  if (name == null || components == null || components.isEmpty) {
+    return Response.badRequest(body: 'Missing or invalid recipe name or components.\n');
   }
 
   // Open the SQLite database
@@ -56,14 +63,14 @@ Response _setReceiptHandler(Request request) {
   // Get the ID of the newly inserted recipe
   final recipeId = db.lastInsertRowId;
 
-  // Split the components by comma and insert them into the component table
+  // Insert each component into the component table
   final insertComponentStmt = db.prepare(
       'INSERT INTO component (name, recipe_id) VALUES (?, ?)');
 
-  final componentList = components.split(',');
-
-  for (final component in componentList) {
-    insertComponentStmt.execute([component.trim(), recipeId]);
+  for (final component in components) {
+    if (component is String && component.isNotEmpty) {
+      insertComponentStmt.execute([component.trim(), recipeId]);
+    }
   }
 
   // Clean up the prepared statements
@@ -73,8 +80,9 @@ Response _setReceiptHandler(Request request) {
   // Close the database connection
   db.dispose();
 
-  return Response.ok('Recipe "$name" with components [$components] saved.\n');
+  return Response.ok('Recipe "$name" with components saved.\n');
 }
+
 
 Response _getReceiptHandler(Request request) {
   final id = request.params['id'];
