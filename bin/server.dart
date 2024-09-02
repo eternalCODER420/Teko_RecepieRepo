@@ -26,7 +26,8 @@ final _router = Router()
   ..get('/echo/<message>', _echoHandler)
   ..get('/receipt', _getReceiptsHandler)
   ..get('/receipt/set/<name>/<components>', _setReceiptHandler)
-  ..get('/receipt/get/<id>', _getReceiptHandler);
+  ..get('/receipt/get/<id>', _getReceiptHandler)
+  ..get('/receipt/del/<id>', _deleteReceiptHandler);
 
 Response _rootHandler(Request req) {
   return Response.ok('Hello, World!\n');
@@ -167,8 +168,55 @@ Response _getReceiptsHandler(Request request) {
   });
 }
 
+Response _deleteReceiptHandler(Request request) {
+  final id = request.params['id'];
+
+  if (id == null) {
+    return Response.badRequest(body: 'Missing recipe ID.\n');
+  }
+
+  // Open the SQLite database
+  final db = sqlite3.open('recipeDb.db');
+
+  // Check if the recipe exists
+  final recipeResult = db.select('SELECT * FROM recipe WHERE id = ?', [id]);
+
+  if (recipeResult.isEmpty) {
+    db.dispose();
+    return Response.notFound('Recipe with ID $id not found.\n');
+  }
+
+  // Begin a transaction to ensure atomicity
+  db.execute('BEGIN TRANSACTION');
+
+  try {
+    // Delete components associated with the recipe
+    db.execute('DELETE FROM component WHERE recipe_id = ?', [id]);
+
+    // Delete the recipe itself
+    db.execute('DELETE FROM recipe WHERE id = ?', [id]);
+
+    // Commit the transaction
+    db.execute('COMMIT');
+
+    // Close the database connection
+    db.dispose();
+
+    return Response.ok('Recipe with ID $id and its components were deleted.\n');
+  } catch (e) {
+    // Rollback the transaction in case of an error
+    db.execute('ROLLBACK');
+
+    // Close the database connection
+    db.dispose();
+
+    return Response.internalServerError(body: 'Failed to delete recipe with ID $id.\n');
+  }
+}
+
+
 void main(List<String> args) async {
-  // Override the dynamic library loader based on the platform
+  // Override the dynamic library loader based on the platform explicitly, because it doesnt work automatically in our tests
   if (Platform.isWindows) {
     open.overrideFor(OperatingSystem.windows, _openOnWindows);
   } else if (Platform.isLinux) {
