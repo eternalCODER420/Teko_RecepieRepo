@@ -151,12 +151,12 @@ Response _getReceiptsHandler(Request request) {
     final recipe = {
       'id': recipeId,
       'name': recipeRow['name'],
-      'components': componentResult.map((componentRow) {
-        return {
-          'id': componentRow['id'],
-          'name': componentRow['name'],
-        };
-      }).toList(),
+      // 'components': componentResult.map((componentRow) {
+      //   return {
+      //     'id': componentRow['id'],
+      //     'name': componentRow['name'],
+      //   };
+      // }).toList(),
     };
 
     // Add the recipe to the list
