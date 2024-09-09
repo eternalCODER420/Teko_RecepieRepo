@@ -25,9 +25,8 @@ final _router = Router()
   ..get('/', _rootHandler)
   ..get('/echo/<message>', _echoHandler)
   ..get('/receipt', _getReceiptsHandler)
-  // ..get('/receipt/set/<name>/<components>', _setReceiptHandler)
-  ..post('/receipt', _setReceiptHandler)  // Changed to POST
   ..get('/receipt/<id>', _getReceiptHandler)
+  ..post('/receipt', _setReceiptHandler)  // Changed to POST
   ..delete('/receipt/<id>', _deleteReceiptHandler);
 
 Response _rootHandler(Request req) {
