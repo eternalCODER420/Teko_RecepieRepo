@@ -86,7 +86,6 @@ class _RecipeListPageState extends State<RecipeListPage> {
       print('Error deleting recipe: $e');
     }
   }
-
   // Open a new screen to show the recipe details
   void _openRecipe(int id) async {
     final recipeDetails = await _fetchRecipeDetails(id);
@@ -97,6 +96,19 @@ class _RecipeListPageState extends State<RecipeListPage> {
           builder: (context) => RecipeDetailsPage(recipe: recipeDetails),
         ),
       );
+    }
+  }
+  
+  // Navigate to the add recipe page
+  void _navigateToAddRecipe(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddRecipePage()),
+    );
+
+    // After adding, refresh the recipe list if a new recipe was added
+    if (result == true) {
+      _fetchRecipes();
     }
   }
 
@@ -126,16 +138,20 @@ class _RecipeListPageState extends State<RecipeListPage> {
                       ),
                       // Delete button
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          _deleteRecipe(recipe['id']);
-                        },
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      _deleteRecipe(recipe['id']);
+                    },
                       ),
                     ],
                   ),
                 );
               },
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _navigateToAddRecipe(context),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
@@ -178,6 +194,92 @@ class RecipeDetailsPage extends StatelessWidget {
                 child: const Text('OK'),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AddRecipePage extends StatefulWidget {
+  const AddRecipePage({super.key});
+
+  @override
+  State<AddRecipePage> createState() => _AddRecipePageState();
+}
+
+class _AddRecipePageState extends State<AddRecipePage> {
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _componentsController = TextEditingController();
+  bool _isLoading = false;
+
+  // Function to send POST request to add a new recipe
+  Future<void> _addRecipe() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final title = _titleController.text;
+    final components = _componentsController.text;
+
+    final url = Uri.parse('http://127.0.0.1:8080/receipt');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': title,
+          'components': components.split(',').map((c) => c.trim()).toList(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        Navigator.pop(context, true); // Return to main list and refresh
+      } else {
+        throw Exception('Failed to add recipe');
+      }
+    } catch (e) {
+      print('Error adding recipe: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add Recipe'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'Recipe Title',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _componentsController,
+              decoration: const InputDecoration(
+                labelText: 'Components (comma separated)',
+              ),
+              maxLines: 5,
+              keyboardType: TextInputType.multiline,
+            ),
+            const SizedBox(height: 16),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ElevatedButton(
+                    onPressed: _addRecipe,
+                    child: const Text('Add Recipe'),
+                  ),
           ],
         ),
       ),
