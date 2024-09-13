@@ -99,7 +99,7 @@ Future<Response> _setReceiptHandler(Request request) async {
   }
 }
 
-// Asynchronously get a single recipe by its ID
+// Asynchronously get a single recipe by its ID (Optimized)
 Future<Response> _getReceiptHandler(Request request) async {
   final id = request.params['id'];
 
@@ -112,30 +112,34 @@ Future<Response> _getReceiptHandler(Request request) async {
   final db = _openDatabase();
 
   try {
-    // Query to get the recipe by ID
-    final recipeResult = db.select('SELECT * FROM recipe WHERE id = ?', [id]);
+    // Optimized query: Fetch the recipe and its components in one go using a LEFT JOIN
+    final result = db.select('''
+      SELECT r.id AS recipe_id, r.name AS recipe_name, 
+             c.id AS component_id, c.name AS component_name
+      FROM recipe r
+      LEFT JOIN component c ON r.id = c.recipe_id
+      WHERE r.id = ?
+    ''', [id]);
 
-    if (recipeResult.isEmpty) {
+    if (result.isEmpty) {
       return Response.notFound('Recipe with ID $id not found.\n');
     }
 
-    final recipeRow = recipeResult.first;
-
-    // Query to get components for the current recipe
-    final componentResult = db.select(
-        'SELECT * FROM component WHERE recipe_id = ?', [id]);
-
-    // Construct the recipe with its components
-    final recipe = {
-      'id': recipeRow['id'],
-      'name': recipeRow['name'],
-      'components': componentResult.map((componentRow) {
-        return {
-          'id': componentRow['id'],
-          'name': componentRow['name'],
-        };
-      }).toList(),
+    // Build the response from the joined query result
+    final Map<String, dynamic> recipe = {
+      'id': result.first['recipe_id'],
+      'name': result.first['recipe_name'],
+      'components': [],
     };
+
+    for (final row in result) {
+      if (row['component_id'] != null) {
+        recipe['components'].add({
+          'id': row['component_id'],
+          'name': row['component_name'],
+        });
+      }
+    }
 
     // Convert the recipe to JSON
     final jsonResponse = jsonEncode(recipe);
@@ -149,41 +153,42 @@ Future<Response> _getReceiptHandler(Request request) async {
   }
 }
 
-// Asynchronously list all recipes
+// Asynchronously list all recipes (Optimized)
 Future<Response> _getReceiptsHandler(Request request) async {
   // Open the SQLite database
   final db = _openDatabase();
 
   try {
-    // Query to get all recipes
-    final recipeResult = db.select('SELECT * FROM recipe');
+    // Optimized query: Fetch all recipes and their components in one go
+    final result = db.select('''
+      SELECT r.id AS recipe_id, r.name AS recipe_name, 
+             c.id AS component_id, c.name AS component_name
+      FROM recipe r
+      LEFT JOIN component c ON r.id = c.recipe_id
+    ''');
 
     // Preparing to store recipes and their components
-    final List<Map<String, dynamic>> recipes = [];
+    final Map<int, Map<String, dynamic>> recipesMap = {};
 
-    // Loop through each recipe
-    for (final recipeRow in recipeResult) {
-      final recipeId = recipeRow['id'];
-
-      // Query to get components for the current recipe
-      final componentResult = db.select(
-          'SELECT * FROM component WHERE recipe_id = ?', [recipeId]);
-
-      // Constructing the recipe with its components
-      final recipe = {
+    // Loop through each row and group components by recipe
+    for (final row in result) {
+      final recipeId = row['recipe_id'];
+      recipesMap.putIfAbsent(recipeId, () => {
         'id': recipeId,
-        'name': recipeRow['name'],
-        'components': componentResult.map((componentRow) {
-          return {
-            'id': componentRow['id'],
-            'name': componentRow['name'],
-          };
-        }).toList(),
-      };
+        'name': row['recipe_name'],
+        'components': []
+      });
 
-      // Add the recipe to the list
-      recipes.add(recipe);
+      if (row['component_id'] != null) {
+        recipesMap[recipeId]!['components'].add({
+          'id': row['component_id'],
+          'name': row['component_name'],
+        });
+      }
     }
+
+    // Convert the map of recipes to a list
+    final List<Map<String, dynamic>> recipes = recipesMap.values.toList();
 
     // Convert the recipes list to JSON
     final jsonResponse = jsonEncode(recipes);
