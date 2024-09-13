@@ -8,6 +8,19 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sqlite3/open.dart';
 
+// Helper function to open the SQLite database
+Database _openDatabase() {
+  return sqlite3.open('recipeDb.db');
+}
+
+// Helper function to safely close the database
+void _closeDatabase(Database db) {
+  if (!db.isClosed) {
+    db.dispose();
+  }
+}
+
+// Platform-specific dynamic library loaders
 DynamicLibrary _openOnLinux() {
   final scriptDir = File(Platform.script.toFilePath()).parent;
   final libraryNextToScript = File('${scriptDir.path}/sqlite3.so');
@@ -55,33 +68,35 @@ Future<Response> _setReceiptHandler(Request request) async {
   }
 
   // Open the SQLite database
-  final db = sqlite3.open('recipeDb.db');
+  final db = _openDatabase();
 
-  // Insert the recipe into the recipe table
-  final insertRecipeStmt = db.prepare('INSERT INTO recipe (name) VALUES (?)');
-  insertRecipeStmt.execute([name]);
+  try {
+    // Insert the recipe into the recipe table
+    final insertRecipeStmt = db.prepare('INSERT INTO recipe (name) VALUES (?)');
+    insertRecipeStmt.execute([name]);
 
-  // Get the ID of the newly inserted recipe
-  final recipeId = db.lastInsertRowId;
+    // Get the ID of the newly inserted recipe
+    final recipeId = db.lastInsertRowId;
 
-  // Insert each component into the component table
-  final insertComponentStmt = db.prepare(
-      'INSERT INTO component (name, recipe_id) VALUES (?, ?)');
+    // Insert each component into the component table
+    final insertComponentStmt = db.prepare(
+        'INSERT INTO component (name, recipe_id) VALUES (?, ?)');
 
-  for (final component in components) {
-    if (component is String && component.isNotEmpty) {
-      insertComponentStmt.execute([component.trim(), recipeId]);
+    for (final component in components) {
+      if (component is String && component.isNotEmpty) {
+        insertComponentStmt.execute([component.trim(), recipeId]);
+      }
     }
+
+    // Clean up the prepared statements
+    insertRecipeStmt.dispose();
+    insertComponentStmt.dispose();
+
+    return Response.ok('Recipe "$name" with components saved.\n');
+  } finally {
+    // Close the database connection
+    _closeDatabase(db);
   }
-
-  // Clean up the prepared statements
-  insertRecipeStmt.dispose();
-  insertComponentStmt.dispose();
-
-  // Close the database connection
-  db.dispose();
-
-  return Response.ok('Recipe "$name" with components saved.\n');
 }
 
 // Asynchronously get a single recipe by its ID
@@ -94,66 +109,25 @@ Future<Response> _getReceiptHandler(Request request) async {
   }
 
   // Open the SQLite database
-  final db = sqlite3.open('recipeDb.db');
+  final db = _openDatabase();
 
-  // Query to get the recipe by ID
-  final recipeResult = db.select('SELECT * FROM recipe WHERE id = ?', [id]);
+  try {
+    // Query to get the recipe by ID
+    final recipeResult = db.select('SELECT * FROM recipe WHERE id = ?', [id]);
 
-  if (recipeResult.isEmpty) {
-    return Response.notFound('Recipe with ID $id not found.\n');
-  }
+    if (recipeResult.isEmpty) {
+      return Response.notFound('Recipe with ID $id not found.\n');
+    }
 
-  final recipeRow = recipeResult.first;
-
-  // Query to get components for the current recipe
-  final componentResult = db.select(
-      'SELECT * FROM component WHERE recipe_id = ?', [id]);
-
-  // Construct the recipe with its components
-  final recipe = {
-    'id': recipeRow['id'],
-    'name': recipeRow['name'],
-    'components': componentResult.map((componentRow) {
-      return {
-        'id': componentRow['id'],
-        'name': componentRow['name'],
-      };
-    }).toList(),
-  };
-
-  // Close the database connection
-  db.dispose();
-
-  // Convert the recipe to JSON
-  final jsonResponse = jsonEncode(recipe);
-
-  return Response.ok(jsonResponse, headers: {
-    HttpHeaders.contentTypeHeader: 'application/json',
-  });
-}
-
-// Asynchronously list all recipes
-Future<Response> _getReceiptsHandler(Request request) async {
-  // Open the SQLite database
-  final db = sqlite3.open('recipeDb.db');
-
-  // Query to get all recipes
-  final recipeResult = db.select('SELECT * FROM recipe');
-
-  // Preparing to store recipes and their components
-  final List<Map<String, dynamic>> recipes = [];
-
-  // Loop through each recipe
-  for (final recipeRow in recipeResult) {
-    final recipeId = recipeRow['id'];
+    final recipeRow = recipeResult.first;
 
     // Query to get components for the current recipe
     final componentResult = db.select(
-        'SELECT * FROM component WHERE recipe_id = ?', [recipeId]);
+        'SELECT * FROM component WHERE recipe_id = ?', [id]);
 
-    // Constructing the recipe with its components
+    // Construct the recipe with its components
     final recipe = {
-      'id': recipeId,
+      'id': recipeRow['id'],
       'name': recipeRow['name'],
       'components': componentResult.map((componentRow) {
         return {
@@ -163,20 +137,65 @@ Future<Response> _getReceiptsHandler(Request request) async {
       }).toList(),
     };
 
-    // Add the recipe to the list
-    recipes.add(recipe);
+    // Convert the recipe to JSON
+    final jsonResponse = jsonEncode(recipe);
+
+    return Response.ok(jsonResponse, headers: {
+      HttpHeaders.contentTypeHeader: 'application/json',
+    });
+  } finally {
+    // Close the database connection
+    _closeDatabase(db);
   }
+}
 
-  // Close the database connection
-  db.dispose();
+// Asynchronously list all recipes
+Future<Response> _getReceiptsHandler(Request request) async {
+  // Open the SQLite database
+  final db = _openDatabase();
 
-  // Convert the recipes list to JSON
-  final jsonResponse = jsonEncode(recipes);
+  try {
+    // Query to get all recipes
+    final recipeResult = db.select('SELECT * FROM recipe');
 
-  // Return the JSON response
-  return Response.ok(jsonResponse, headers: {
-    HttpHeaders.contentTypeHeader: 'application/json',
-  });
+    // Preparing to store recipes and their components
+    final List<Map<String, dynamic>> recipes = [];
+
+    // Loop through each recipe
+    for (final recipeRow in recipeResult) {
+      final recipeId = recipeRow['id'];
+
+      // Query to get components for the current recipe
+      final componentResult = db.select(
+          'SELECT * FROM component WHERE recipe_id = ?', [recipeId]);
+
+      // Constructing the recipe with its components
+      final recipe = {
+        'id': recipeId,
+        'name': recipeRow['name'],
+        'components': componentResult.map((componentRow) {
+          return {
+            'id': componentRow['id'],
+            'name': componentRow['name'],
+          };
+        }).toList(),
+      };
+
+      // Add the recipe to the list
+      recipes.add(recipe);
+    }
+
+    // Convert the recipes list to JSON
+    final jsonResponse = jsonEncode(recipes);
+
+    // Return the JSON response
+    return Response.ok(jsonResponse, headers: {
+      HttpHeaders.contentTypeHeader: 'application/json',
+    });
+  } finally {
+    // Close the database connection
+    _closeDatabase(db);
+  }
 }
 
 // Asynchronously delete a recipe by its ID
@@ -189,20 +208,19 @@ Future<Response> _deleteReceiptHandler(Request request) async {
   }
 
   // Open the SQLite database
-  final db = sqlite3.open('recipeDb.db');
-
-  // Check if the recipe exists
-  final recipeResult = db.select('SELECT * FROM recipe WHERE id = ?', [id]);
-
-  if (recipeResult.isEmpty) {
-    db.dispose();
-    return Response.notFound('Recipe with ID $id not found.\n');
-  }
-
-  // Begin a transaction to ensure atomicity
-  db.execute('BEGIN TRANSACTION');
+  final db = _openDatabase();
 
   try {
+    // Check if the recipe exists
+    final recipeResult = db.select('SELECT * FROM recipe WHERE id = ?', [id]);
+
+    if (recipeResult.isEmpty) {
+      return Response.notFound('Recipe with ID $id not found.\n');
+    }
+
+    // Begin a transaction to ensure atomicity
+    db.execute('BEGIN TRANSACTION');
+
     // Delete components associated with the recipe
     db.execute('DELETE FROM component WHERE recipe_id = ?', [id]);
 
@@ -212,24 +230,19 @@ Future<Response> _deleteReceiptHandler(Request request) async {
     // Commit the transaction
     db.execute('COMMIT');
 
-    // Close the database connection
-    db.dispose();
-
     return Response.ok('Recipe with ID $id and its components were deleted.\n');
   } catch (e) {
     // Rollback the transaction in case of an error
     db.execute('ROLLBACK');
-
-    // Close the database connection
-    db.dispose();
-
     return Response.internalServerError(body: 'Failed to delete recipe with ID $id.\n');
+  } finally {
+    // Close the database connection
+    _closeDatabase(db);
   }
 }
 
 // Main function to start the server
 void main(List<String> args) async {
-  // Override the dynamic library loader based on the platform explicitly, because it doesnt work automatically in our tests
   if (Platform.isWindows) {
     open.overrideFor(OperatingSystem.windows, _openOnWindows);
   } else if (Platform.isLinux) {
