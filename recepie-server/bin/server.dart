@@ -24,30 +24,32 @@ DynamicLibrary _openOnWindows() {
 final _router = Router()
   ..get('/', _rootHandler)
   ..get('/echo/<message>', _echoHandler)
-  ..get('/receipt', _getReceiptsHandler)
-  ..get('/receipt/<id>', _getReceiptHandler)
-  ..post('/receipt', _setReceiptHandler)  // Changed to POST
-  ..delete('/receipt/<id>', _deleteReceiptHandler);
+  ..get('/receipt', _getReceiptsHandler) // List all recipes
+  ..get('/receipt/<id>', _getReceiptHandler) // Get a single recipe by ID
+  ..post('/receipt', _setReceiptHandler) // Create a new recipe (POST)
+  ..delete('/receipt/<id>', _deleteReceiptHandler); // Delete a recipe by ID
 
+// A basic handler for the root URL, returning a simple "Hello, World!" response.
 Response _rootHandler(Request req) {
   return Response.ok('Hello, World!\n');
 }
 
+// Echo handler that returns the message sent as a URL parameter
 Response _echoHandler(Request request) {
   final message = request.params['message'];
   return Response.ok('$message\n');
 }
 
+// Asynchronously add a new recipe with its components to the database
 Future<Response> _setReceiptHandler(Request request) async {
-  // Parse the JSON body of the request
-  // async because it can take a while to read from network, depending on how large body is
+  // Parse the JSON body of the request (async because reading from the network can take time)
   final payload = await request.readAsString();
   final jsonData = jsonDecode(payload);
 
-  //? -> allow null (dont cause exception), but process and respond to it below
   final String? name = jsonData['name'];
   final List<dynamic>? components = jsonData['components'];
 
+  // Check if required fields are present and valid
   if (name == null || components == null || components.isEmpty) {
     return Response.badRequest(body: 'Missing or invalid recipe name or components.\n');
   }
@@ -82,10 +84,11 @@ Future<Response> _setReceiptHandler(Request request) async {
   return Response.ok('Recipe "$name" with components saved.\n');
 }
 
-
-Response _getReceiptHandler(Request request) {
+// Asynchronously get a single recipe by its ID
+Future<Response> _getReceiptHandler(Request request) async {
   final id = request.params['id'];
 
+  // Check if the ID is provided
   if (id == null) {
     return Response.badRequest(body: 'Missing recipe ID.\n');
   }
@@ -129,7 +132,8 @@ Response _getReceiptHandler(Request request) {
   });
 }
 
-Response _getReceiptsHandler(Request request) {
+// Asynchronously list all recipes
+Future<Response> _getReceiptsHandler(Request request) async {
   // Open the SQLite database
   final db = sqlite3.open('recipeDb.db');
 
@@ -151,12 +155,12 @@ Response _getReceiptsHandler(Request request) {
     final recipe = {
       'id': recipeId,
       'name': recipeRow['name'],
-      // 'components': componentResult.map((componentRow) {
-      //   return {
-      //     'id': componentRow['id'],
-      //     'name': componentRow['name'],
-      //   };
-      // }).toList(),
+      'components': componentResult.map((componentRow) {
+        return {
+          'id': componentRow['id'],
+          'name': componentRow['name'],
+        };
+      }).toList(),
     };
 
     // Add the recipe to the list
@@ -175,9 +179,11 @@ Response _getReceiptsHandler(Request request) {
   });
 }
 
-Response _deleteReceiptHandler(Request request) {
+// Asynchronously delete a recipe by its ID
+Future<Response> _deleteReceiptHandler(Request request) async {
   final id = request.params['id'];
 
+  // Check if the ID is provided
   if (id == null) {
     return Response.badRequest(body: 'Missing recipe ID.\n');
   }
@@ -221,7 +227,7 @@ Response _deleteReceiptHandler(Request request) {
   }
 }
 
-
+// Main function to start the server
 void main(List<String> args) async {
   // Override the dynamic library loader based on the platform explicitly, because it doesnt work automatically in our tests
   if (Platform.isWindows) {
