@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'add_recipe_page.dart';
 import 'recipe_details_page.dart';
-import '../services/recipe_service.dart'; // Import the service to fetch/delete recipes
+import '../services/recipe_service.dart';  // Import the service to fetch/delete recipes
 
 class RecipeListPage extends StatefulWidget {
   const RecipeListPage({super.key});
@@ -60,6 +60,7 @@ class _RecipeListPageState extends State<RecipeListPage> {
                 return ListTile(
                   title: Text(recipe['name']),
                   trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.open_in_new, color: Colors.blue),
