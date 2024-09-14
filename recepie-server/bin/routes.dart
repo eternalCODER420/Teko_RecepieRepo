@@ -53,7 +53,7 @@ Future<Response> _setReceiptHandler(Request request) async {
     );
 
     for (final component in components) {
-      if (component is String && component.isNotEmpty) {
+      if (component.isNotEmpty) {
         insertComponentStmt.execute([component.trim(), recipeId]);
       }
     }

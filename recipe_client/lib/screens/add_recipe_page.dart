@@ -21,9 +21,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
     final title = _titleController.text;
     final components = _componentsController.text.split(',').map((c) => c.trim()).toList();
 
-    final success = await RecipeService.addRecipe(title, components);
-
-    if (success) {
+    if (await RecipeService.addRecipe(title, components)) {
       Navigator.pop(context, true);
     } else {
       print('Error adding recipe');
@@ -38,31 +36,26 @@ class _AddRecipePageState extends State<AddRecipePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Recipe'),
+        title: const Text('Add Recipe')
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Recipe Title'),
-            ),
-            const SizedBox(height: 16),
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Recipe Title')),
             TextField(
               controller: _componentsController,
-              decoration: const InputDecoration(labelText: 'Components (comma separated)'),
+              decoration: const InputDecoration(
+                  labelText: 'Components (comma separated)'),
               maxLines: 5,
-              keyboardType: TextInputType.multiline,
             ),
-            const SizedBox(height: 16),
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const CircularProgressIndicator()
                 : ElevatedButton(
-                    onPressed: _addRecipe,
-                    child: const Text('Add Recipe'),
-                  ),
+                    onPressed: _addRecipe, 
+                    child: const Text('Add Recipe')),
           ],
         ),
       ),

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'add_recipe_page.dart';
 import 'recipe_details_page.dart';
-import '../services/recipe_service.dart';  // Import the service to fetch/delete recipes
+import '../services/recipe_service.dart'; // Import the service to fetch/delete recipes
 
 class RecipeListPage extends StatefulWidget {
   const RecipeListPage({super.key});
@@ -62,7 +60,6 @@ class _RecipeListPageState extends State<RecipeListPage> {
                 return ListTile(
                   title: Text(recipe['name']),
                   trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.open_in_new, color: Colors.blue),
@@ -82,15 +79,12 @@ class _RecipeListPageState extends State<RecipeListPage> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AddRecipePage()),
-          ).then((result) {
-            if (result == true) {
-              _fetchRecipes();
-            }
-          });
+          );
+          if (result == true) _fetchRecipes(); // Fetch recipes directly after popping
         },
         child: const Icon(Icons.add),
       ),
