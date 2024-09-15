@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'add_recipe_page.dart';
 import 'recipe_details_page.dart';
-import '../services/recipe_service.dart';  // Import the service to fetch/delete recipes
+import '../services/recipe_service.dart'; 
 
 class RecipeListPage extends StatefulWidget {
   const RecipeListPage({super.key});
@@ -85,7 +85,7 @@ class _RecipeListPageState extends State<RecipeListPage> {
             context,
             MaterialPageRoute(builder: (context) => const AddRecipePage()),
           );
-          if (result == true) _fetchRecipes(); // Fetch recipes directly after popping
+          if (result == true) _fetchRecipes();
         },
         child: const Icon(Icons.add),
       ),

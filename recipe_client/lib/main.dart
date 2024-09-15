@@ -10,12 +10,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       title: 'Recipe List',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const RecipeListPage(),
+      home: RecipeListPage(),
     );
   }
 }

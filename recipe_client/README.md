@@ -1,6 +1,11 @@
 # recipe_client
 
-A new Flutter project.
+This is a recipe managment client
+It connects to 127.0.0.1:8080 (can be set in services/recipe_service.dart)
+When starting main.dart, it will open the recipe_list_page screen.
+This page has a + button to create recipes.
+After creating recipes, they are visible in the recipe-list. 
+Each entry has a button to view the recipe, or to delete it.
 
 ## Getting Started
 

@@ -3,8 +3,6 @@ import 'package:sqlite3/open.dart';
 import 'dart:io';
 import 'dart:ffi';
 
-// Helper functions to handle SQLite database
-
 DynamicLibrary _openOnLinux() {
   final scriptDir = File(Platform.script.toFilePath()).parent;
   final libraryNextToScript = File('${scriptDir.path}/sqlite3.so');
@@ -17,7 +15,6 @@ DynamicLibrary _openOnWindows() {
   return DynamicLibrary.open(libraryNextToScript.path);
 }
 
-// Function to load the correct SQLite dynamic library
 void loadSQLiteLibrary() {
   if (Platform.isWindows) {
     open.overrideFor(OperatingSystem.windows, _openOnWindows);

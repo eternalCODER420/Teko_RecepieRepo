@@ -4,32 +4,14 @@ import 'package:shelf_router/shelf_router.dart';
 import 'database.dart'; // Import the database helpers
 
 void configureRoutes(Router router) {
-  // Root handler
-  router.get('/', _rootHandler);
 
-  // Echo handler
-  router.get('/echo/<message>', _echoHandler);
-
-  // Recipe-related routes
-  router.get('/receipt', _getReceiptsHandler);          // List all recipes
-  router.get('/receipt/<id>', _getReceiptHandler);      // Get a single recipe by ID
-  router.post('/receipt', _setReceiptHandler);          // Create a new recipe
-  router.delete('/receipt/<id>', _deleteReceiptHandler); // Delete a recipe by ID
+  router.get('/recipe', _getRecipesHandler);          // List all recipes
+  router.get('/recipe/<id>', _getRecipeHandler);      // Get a single recipe by ID
+  router.post('/recipe', _setRecipeHandler);          // Create a new recipe
+  router.delete('/recipe/<id>', _deleteRecipeHandler); // Delete a recipe by ID
 }
 
-// Basic handler for root URL
-Response _rootHandler(Request request) {
-  return Response.ok('Hello, World!\n');
-}
-
-// Echo handler to return the message provided in the URL
-Response _echoHandler(Request request) {
-  final message = request.params['message'];
-  return Response.ok('$message\n');
-}
-
-// Asynchronously add a new recipe with its components to the database
-Future<Response> _setReceiptHandler(Request request) async {
+Future<Response> _setRecipeHandler(Request request) async {
   final payload = await request.readAsString();
   final jsonData = jsonDecode(payload);
 
@@ -67,8 +49,7 @@ Future<Response> _setReceiptHandler(Request request) async {
   }
 }
 
-// Asynchronously fetch all recipes
-Future<Response> _getReceiptsHandler(Request request) async {
+Future<Response> _getRecipesHandler(Request request) async {
   final db = openDatabase();
 
   try {
@@ -108,8 +89,7 @@ Future<Response> _getReceiptsHandler(Request request) async {
   }
 }
 
-// Asynchronously fetch a single recipe by its ID
-Future<Response> _getReceiptHandler(Request request) async {
+Future<Response> _getRecipeHandler(Request request) async {
   final id = request.params['id'];
   if (id == null) {
     return Response.badRequest(body: 'Missing recipe ID.\n');
@@ -155,8 +135,7 @@ Future<Response> _getReceiptHandler(Request request) async {
   }
 }
 
-// Asynchronously delete a recipe by its ID
-Future<Response> _deleteReceiptHandler(Request request) async {
+Future<Response> _deleteRecipeHandler(Request request) async {
   final id = request.params['id'];
   if (id == null) {
     return Response.badRequest(body: 'Missing recipe ID.\n');

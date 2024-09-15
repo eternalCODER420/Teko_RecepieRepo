@@ -15,13 +15,6 @@ $ dart run bin/server.dart
 Server listening on port 8080
 ```
 
-And then from a second terminal:
-```
-$ curl http://0.0.0.0:8080
-Hello, World!
-$ curl http://0.0.0.0:8080/echo/I_love_Dart
-I_love_Dart
-```
 
 ## Running with Docker
 
@@ -34,18 +27,10 @@ $ docker run -it -p 8080:8080 myserver
 Server listening on port 8080
 ```
 
-And then from a second terminal:
-```
-$ curl http://0.0.0.0:8080
-Hello, World!
-$ curl http://0.0.0.0:8080/echo/I_love_Dart
-I_love_Dart
-```
-
 You should see the logging printed in the first terminal:
 ```
 2021-05-06T15:47:04.620417  0:00:00.000158 GET     [200] /
-2021-05-06T15:47:08.392928  0:00:00.001216 GET     [200] /echo/I_love_Dart
+2021-05-06T15:47:08.392928  0:00:00.001216 GET     [200] /recipe
 ```
 
 Downloded sql stuff from : https://www.sqlite.org/download.html
